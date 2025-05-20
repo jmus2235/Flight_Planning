@@ -5,7 +5,7 @@ import time
 
 def create_45_degree_crop(input_shapefile, output_shapefile):
     """
-    Crops polygons creating a triangular area with 45-degree angles from the center of the base
+    Crops north-facing polygons creating a triangular area with 45-degree angles from the center of the base
     The apex of the triangle is at the bottom, with the base at the top of the polygon
     
     Parameters:
@@ -242,6 +242,6 @@ def create_45_degree_crop(input_shapefile, output_shapefile):
 # Example usage
 if __name__ == "__main__":
     create_45_degree_crop(
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_UPTA_S2_P3_625m_max_v6_VQ780_fltlines_3nm_buff_cropped_north.shp",
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_UPTA_3nm_buff_north_45_H.shp"
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_CRBU_S2_P1_P2_625_max_buff_cropped_north.shp",
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_CRBU_3nm_buff_north_45_A.shp"
     )
