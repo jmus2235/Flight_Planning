@@ -2,7 +2,6 @@ import arcpy
 import os
 import math
 import time
-import csv
 
 def create_45_degree_crop_south(input_shapefile, output_shapefile):
     """
@@ -226,43 +225,9 @@ def create_45_degree_crop_south(input_shapefile, output_shapefile):
     print(f"Processing complete. Output saved to {output_shapefile}")
     return output_shapefile
 
-def dem_stats_to_csv(polygon_shapefile, dem_raster, output_csv, index_field="FL_NUM"):
-    """
-    Calculates DEM statistics for each polygon and writes results to a CSV.
-    Statistics: MIN, MAX, MEAN, STD
-    """
-    arcpy.env.overwriteOutput = True
-    temp_table = "in_memory\\dem_stats"
-
-    # Zonal statistics as table
-    arcpy.sa.ZonalStatisticsAsTable(
-        in_zone_data=polygon_shapefile,
-        zone_field=index_field,
-        in_value_raster=dem_raster,
-        out_table=temp_table,
-        statistics_type="ALL"
-    )
-
-    # Read results and write to CSV
-    fields = [index_field, "MIN", "MAX", "MEAN", "STD"]
-    with arcpy.da.SearchCursor(temp_table, fields) as cursor, open(output_csv, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(fields)
-        for row in cursor:
-            writer.writerow(row)
-
-    arcpy.Delete_management(temp_table)
-    print(f"DEM statistics written to {output_csv}")
-
-# Example usage after your cropping function:
+# Example usage
 if __name__ == "__main__":
-    cropped_shapefile = create_45_degree_crop_south(
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_CRBU_S2_P1_P2_625_max_buff_cropped_south.shp",
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_CRBU_3nm_buff_south_45_A.shp"
-    )
-    dem_stats_to_csv(
-        cropped_shapefile,
-        r"C:\path\to\your\dem.tif",
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_CRBU_3nm_buff_south_45_A_dem_stats.csv",
-        index_field="FL_NUM"
+    create_45_degree_crop_south(
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_UPTA_S2_P3_625m_max_v6_VQ780_fltlines_3nm_buff_cropped_south.shp",
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_UPTA_3nm_buff_south_45_C.shp"
     )
