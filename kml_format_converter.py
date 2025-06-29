@@ -2,9 +2,11 @@
 """
 KML Converter: ArcGIS Pro to Proprietary Software Format (Point Output)
 Converts point-based KML from ArcGIS Pro to match target format structure while preserving points
-Anaconda Command line: python kml_format_converter.py input_arcgis.kml target_format.kml output.kml
-"""
 
+Usage:
+    python kml_format_converter.py input.kml output.kml
+    python kml_format_converter.py input.kml output.kml --target-kml reference.kml
+"""
 
 import xml.etree.ElementTree as ET
 import argparse
@@ -293,34 +295,18 @@ class KMLConverter:
 			</script></html>'''
     
     def generate_target_kml(self, points, format_info, output_file):
-        """Generate KML in the target format with points"""
-        # Create root KML element
+        """Generate KML in the target format with points - simplified format"""
+        # Create root KML element with simple namespace (matching working example)
         root = ET.Element('kml')
-        root.set('xmlns', 'http://www.opengis.net/kml/2.2')
-        root.set('xmlns:gx', 'http://www.google.com/kml/ext/2.2')
-        root.set('xmlns:kml', 'http://www.opengis.net/kml/2.2')
-        root.set('xmlns:atom', 'http://www.w3.org/2005/Atom')
+        root.set('xmlns', 'http://earth.google.com/kml/2.2')
         
         document = ET.SubElement(root, 'Document')
-        document.set('id', format_info.get('main_folder_name', 'ConvertedPoints'))
-        document.set('xsi:schemaLocation', 
-                    'http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/ogckml22.xsd http://www.google.com/kml/ext/2.2 http://code.google.com/apis/kml/schema/kml22gx.xsd')
         
-        # Add document name and snippet
+        # Add document name
         doc_name = ET.SubElement(document, 'name')
-        doc_name.text = format_info.get('main_folder_name', 'ConvertedPoints')
+        doc_name.text = Path(output_file).stem
         
-        if format_info.get('uses_snippets', False):
-            doc_snippet = ET.SubElement(document, 'snippet')
-            doc_snippet.text = ''
-        
-        # Add atom link if present in target format
-        atom_link = ET.SubElement(document, '{http://www.w3.org/2005/Atom}link')
-        atom_link.set('rel', 'app')
-        atom_link.set('href', 'https://www.google.com/earth/about/versions/#earth-pro')
-        atom_link.set('title', 'Google Earth Pro 7.3.6.10201')
-        
-        # Add styles
+        # Add styles from target format if available, otherwise create simple default
         if format_info.get('styles'):
             for style_id, style_xml in format_info['styles'].items():
                 try:
@@ -329,80 +315,84 @@ class KMLConverter:
                 except ET.ParseError:
                     pass
         else:
-            # Create default style if none found
+            # Create simple default style matching working example
             default_style = ET.SubElement(document, 'Style')
-            default_style.set('id', 'IconStyle00')
+            default_style.set('id', 'GCP')
             
             icon_style = ET.SubElement(default_style, 'IconStyle')
+            color = ET.SubElement(icon_style, 'color')
+            color.text = 'FFFFFFFF'
+            scale = ET.SubElement(icon_style, 'scale')
+            scale.text = '0.3'
+            
             icon = ET.SubElement(icon_style, 'Icon')
             href = ET.SubElement(icon, 'href')
-            href.text = 'Layer0_Symbol_8733f4c0_0.png'
+            href.text = 'graphics\\GCP.jpg'
+            x = ET.SubElement(icon, 'x')
+            x.text = '224'
+            y = ET.SubElement(icon, 'y')
+            y.text = '224'
+            w = ET.SubElement(icon, 'w')
+            w.text = '32'
+            h = ET.SubElement(icon, 'h')
+            h.text = '32'
             
             label_style = ET.SubElement(default_style, 'LabelStyle')
-            label_color = ET.SubElement(label_style, 'color')
-            label_color.text = '00000000'
             label_scale = ET.SubElement(label_style, 'scale')
-            label_scale.text = '0'
+            label_scale.text = '1.0'
+            
+            line_style = ET.SubElement(default_style, 'LineStyle')
+            line_color = ET.SubElement(line_style, 'color')
+            line_color.text = 'FF00FFFF'
+            width = ET.SubElement(line_style, 'width')
+            width.text = '2'
             
             poly_style = ET.SubElement(default_style, 'PolyStyle')
             poly_color = ET.SubElement(poly_style, 'color')
-            poly_color.text = 'ff000000'
-            poly_outline = ET.SubElement(poly_style, 'outline')
-            poly_outline.text = '0'
+            poly_color.text = '00606060'
         
-        # Create main folder if target uses folders
-        if format_info.get('has_folders', False):
-            main_folder = ET.SubElement(document, 'Folder')
-            main_folder.set('id', 'FeatureLayer0')
-            folder_name = ET.SubElement(main_folder, 'name')
-            folder_name.text = format_info.get('main_folder_name', 'ConvertedPoints')
-            
-            if format_info.get('uses_snippets', False):
-                folder_snippet = ET.SubElement(main_folder, 'snippet')
-                folder_snippet.text = ''
-            
-            parent_element = main_folder
-        else:
-            parent_element = document
-        
-        # Create point placemarks
+        # Create point placemarks (no folders - direct under document)
         for i, point in enumerate(points):
-            placemark = ET.SubElement(parent_element, 'Placemark')
-            placemark.set('id', f'ID_{i:05d}')
+            placemark = ET.SubElement(document, 'Placemark')
             
             # Name
             name = ET.SubElement(placemark, 'name')
-            name.text = point['name']
+            name.text = str(point['name']).zfill(3)  # Zero-pad numbers like 001, 002
             
-            # Snippet
-            if format_info.get('uses_snippets', False):
-                snippet = ET.SubElement(placemark, 'snippet')
-                snippet.text = ''
-            
-            # Description
-            if format_info.get('uses_descriptions', False):
-                description = ET.SubElement(placemark, 'description')
-                if format_info.get('description_format') == 'html_table':
-                    description.text = self.create_html_table_description(point['name'])
-                else:
-                    description.text = f"Point {point['name']}"
+            # Snippet (empty)
+            snippet = ET.SubElement(placemark, 'snippet')
+            snippet.text = ''
             
             # Style reference
             style_url = ET.SubElement(placemark, 'styleUrl')
-            # Use first available style ID or default
             available_styles = list(format_info.get('styles', {}).keys())
             if available_styles:
                 style_url.text = f"#{available_styles[0]}"
             else:
-                style_url.text = "#IconStyle00"
+                style_url.text = "#GCP"
+            
+            # Description with CDATA format
+            description = ET.SubElement(placemark, 'description')
+            point_name = str(point['name']).zfill(3)
+            description.text = f'''
+\t\t\t<![CDATA[
+\t\t\t\t{point_name}<br>
+\t\t\t\t<br><br>
+\t\t\t]]>
+\t\t'''
             
             # Point geometry
             point_elem = ET.SubElement(placemark, 'Point')
+            altitude_mode = ET.SubElement(point_elem, 'altitudeMode')
+            altitude_mode.text = 'clampToGround'
+            
             coordinates = ET.SubElement(point_elem, 'coordinates')
-            coordinates.text = f"{point['lon']},{point['lat']},{point['alt']}"
+            # Format coordinates without altitude (matching working example)
+            coordinates.text = f'''
+\t\t\t\t{point['lon']},{point['lat']}
+\t\t\t\t'''
         
         # Write to file with proper formatting
-        # First create the tree
         tree = ET.ElementTree(root)
         
         # Format the XML with proper indentation
@@ -430,7 +420,10 @@ class KMLConverter:
     
     def convert(self, input_file, target_file, output_file):
         """Main conversion function"""
-        print(f"Converting {input_file} to format similar to {target_file}")
+        if target_file:
+            print(f"Converting {input_file} to format similar to {target_file}")
+        else:
+            print(f"Converting {input_file} to proprietary software format")
         
         # Parse input points
         points = self.parse_arcgis_kml(input_file)
@@ -440,9 +433,20 @@ class KMLConverter:
         
         print(f"Found {len(points)} points")
         
-        # Analyze target format
-        format_info = self.analyze_target_format(target_file)
-        print(f"Target format analysis: {format_info}")
+        # Analyze target format if provided, otherwise use default
+        if target_file:
+            format_info = self.analyze_target_format(target_file)
+            print(f"Target format analysis: {format_info}")
+        else:
+            format_info = {
+                'has_folders': False,
+                'uses_snippets': True,
+                'uses_descriptions': True,
+                'description_format': 'cdata',
+                'styles': {},
+                'main_folder_name': 'Points'
+            }
+            print("Using default proprietary software format")
         
         # Generate output KML
         self.generate_target_kml(points, format_info, output_file)
@@ -453,17 +457,18 @@ class KMLConverter:
 def main():
     parser = argparse.ArgumentParser(description='Convert ArcGIS Pro KML points to proprietary software format')
     parser.add_argument('input_kml', help='Input KML file from ArcGIS Pro')
-    parser.add_argument('target_kml', help='Target KML file (format reference)')
     parser.add_argument('output_kml', help='Output KML file')
+    parser.add_argument('--target-kml', help='Target KML file (format reference) - optional', default=None)
     
     args = parser.parse_args()
     
-    # Validate input files
+    # Validate input file
     if not Path(args.input_kml).exists():
         print(f"Error: Input file {args.input_kml} does not exist")
         sys.exit(1)
     
-    if not Path(args.target_kml).exists():
+    # Validate target file if provided
+    if args.target_kml and not Path(args.target_kml).exists():
         print(f"Error: Target file {args.target_kml} does not exist")
         sys.exit(1)
     
