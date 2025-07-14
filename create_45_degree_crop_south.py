@@ -8,6 +8,8 @@ def create_45_degree_crop_south(input_shapefile, output_shapefile):
     Crops south-facing polygons creating a triangular area with 45-degree angles from the center of the top
     The apex of the triangle is at the top, with the base at the bottom of the polygon
     
+    Requirements: Input shapefiles must be in WGS84 (not UTM)
+    
     Parameters:
     input_shapefile - Path to the input shapefile containing polygons
     output_shapefile - Path to save the output cropped polygons
@@ -228,6 +230,6 @@ def create_45_degree_crop_south(input_shapefile, output_shapefile):
 # Example usage
 if __name__ == "__main__":
     create_45_degree_crop_south(
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_UPTA_S2_P3_625m_max_v6_VQ780_fltlines_3nm_buff_cropped_south.shp",
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes\D13_UPTA_3nm_buff_south_45_C.shp"
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes\D10_RMNP_R2_P1_v1_650AGLmax_fltlines_3nm_buff_cropped_south.shp",
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes\D10_RMNP_R2_P1_v1_650AGLmax_fltlines_3nm_buff_cropped_south_45_A.shp"
     )

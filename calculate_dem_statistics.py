@@ -9,7 +9,9 @@ def calculate_dem_statistics(polygon_shapefile, dem_raster, output_csv, zone_fie
     """
     Calculate DEM statistics for each polygon feature in a shapefile.
     
-    Parameters:
+    Requirements: Input shapefiles must be in WGS84 (not UTM)
+    
+    Parameters: Both the input DEM and cropped buffer areas polygon shapefiles should be in the same projection (UTM recommended)
     -----------
     polygon_shapefile : str
         Path to the input polygon shapefile
@@ -48,14 +50,24 @@ def calculate_dem_statistics(polygon_shapefile, dem_raster, output_csv, zone_fie
         feature_info = {}
         field_names = [f.name for f in arcpy.ListFields(polygon_shapefile)]
         
-        # Check if FLNUM_1 exists
-        use_flnum = "FLNUM_1" in field_names
+        # # Check if FLNUM_1 exists
+        # use_flnum = "FLNUM_1" in field_names
+        # # If not, check if FLNUM exists as an alternative
+        # if not use_flnum and "FLNUM" in field_names:
+        #     use_flnum = True
+        #     flnum_field = "FLNUM"
+        # else:
+        #     flnum_field = "FLNUM_1"
+        
+        # Check if Name_1 exists
+        use_flnum = "Name_1" in field_names
         # If not, check if FLNUM exists as an alternative
-        if not use_flnum and "FLNUM" in field_names:
+        if not use_flnum and "Name" in field_names:
             use_flnum = True
-            flnum_field = "FLNUM"
+            flnum_field = "Name"
         else:
-            flnum_field = "FLNUM_1"
+            flnum_field = "Name_1"
+        
         
         # Get field information
         fields_to_extract = ["FID", "OID@"]
