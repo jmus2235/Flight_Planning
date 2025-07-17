@@ -21,11 +21,11 @@ from pathlib import Path
 # =============================================================================
 
 # Input file path and name
-INPUT_FILE = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\SBET\sbet_2024080115.out"
+INPUT_FILE = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\SBET\sbet_2024080714.out"
 
 # Output directory and filename (without extension)
 OUTPUT_DIR = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes"
-OUTPUT_FILENAME = "flight_trajectory_RMNP_2024080115_subset"
+OUTPUT_FILENAME = "flight_trajectory_RMNP_2024080714_subset"
 
 # Optional: Coordinate Reference System (WGS84 is default)
 # Change this if you need a different coordinate system

@@ -214,14 +214,14 @@ def create_45_degree_crop(input_shapefile, output_shapefile):
                         with arcpy.da.InsertCursor(output_shapefile, output_fields) as output_cursor:
                             output_cursor.insertRow([clip_row[0]] + list(attributes))
                     
-                    # Clip the original polygon
-                    arcpy.Clip_analysis(polygon, clip_polygon_fc, clip_fc)
+                    # # Clip the original polygon
+                    # arcpy.Clip_analysis(polygon, clip_polygon_fc, clip_fc)
                     
-                    # Add to output
-                    with arcpy.da.SearchCursor(clip_fc, ["SHAPE@"]) as clip_cursor:
-                        for clip_row in clip_cursor:
-                            with arcpy.da.InsertCursor(output_shapefile, output_fields) as output_cursor:
-                                output_cursor.insertRow([clip_row[0]] + list(attributes))
+                    # # Add to output
+                    # with arcpy.da.SearchCursor(clip_fc, ["SHAPE@"]) as clip_cursor:
+                    #     for clip_row in clip_cursor:
+                    #         with arcpy.da.InsertCursor(output_shapefile, output_fields) as output_cursor:
+                    #             output_cursor.insertRow([clip_row[0]] + list(attributes))
             
             except Exception as e:
                 print(f"Error processing polygon {oid}: {str(e)}")
@@ -244,6 +244,6 @@ def create_45_degree_crop(input_shapefile, output_shapefile):
 # Example usage
 if __name__ == "__main__":
     create_45_degree_crop(
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes\D10_RMNP_R2_P1_v1_650AGLmax_fltlines_3nm_buff_cropped_north.shp",
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes\D10_RMNP_R2_P1_v1_650AGLmax_fltlines_3nm_buff_cropped_north_45_A.shp"
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D19_HEAL\Shapes\D19_HEAL_R3_P1_730max_v1_fltlines_3nm_buff_cropped_north.shp",
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D19_HEAL\Shapes\D19_HEAL_R3_P1_730max_v1_fltlines_3nm_buff_cropped_north_45_A.shp"
     )

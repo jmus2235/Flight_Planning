@@ -230,6 +230,6 @@ def create_45_degree_crop_south(input_shapefile, output_shapefile):
 # Example usage
 if __name__ == "__main__":
     create_45_degree_crop_south(
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes\D10_RMNP_R2_P1_v1_650AGLmax_fltlines_3nm_buff_cropped_south.shp",
-        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes\D10_RMNP_R2_P1_v1_650AGLmax_fltlines_3nm_buff_cropped_south_45_A.shp"
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D19_HEAL\Shapes\D19_HEAL_R3_P1_730max_v1_fltlines_3nm_buff_cropped_south.shp",
+        r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D19_HEAL\Shapes\D19_HEAL_R3_P1_730max_v1_fltlines_3nm_buff_cropped_south_45_A.shp"
     )
