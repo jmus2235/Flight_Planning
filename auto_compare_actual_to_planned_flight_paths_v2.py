@@ -1,0 +1,368 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pyproj import Transformer
+from scipy.interpolate import interp1d
+import os
+import glob
+
+# ============================================================================
+# USER DEFINED PARAMETERS
+# ============================================================================
+
+# Path to the CSV file containing flight line information
+FLIGHT_LINES_CSV = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\ALMO_GPS_start_end_times.csv"
+
+# UTM Zone
+UTM_ZONE = "13N"
+
+# Planned flight line path
+PLANNED_PATH = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\export_output\D13_ALMO_S2_P4_625m_max_v7_VQ-780"
+
+# Actual flight track path (where CSV files from shapefile extraction are saved)
+ACTUAL_PATH = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\data_out"
+
+# Output path for plots
+OUTPUT_PATH = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\data_out\png"
+
+# ============================================================================
+# FUNCTIONS
+# ============================================================================
+
+def determine_flight_direction(north_time, south_time):
+    """
+    Determine flight direction based on GPS times.
+    If north_time < south_time, flight is North to South.
+    If south_time < north_time, flight is South to North.
+    """
+    if north_time < south_time:
+        return "NtoS"
+    else:
+        return "StoN"
+
+def find_actual_track_file(actual_path, line_number):
+    """
+    Find the actual track CSV file for a given line number.
+    Searches for files matching pattern: *_line{line_number}.csv
+    """
+    pattern = os.path.join(actual_path, f"*_line{line_number}.csv")
+    matching_files = glob.glob(pattern)
+    
+    if len(matching_files) == 0:
+        return None
+    elif len(matching_files) == 1:
+        return matching_files[0]
+    else:
+        # If multiple files match, return the most recently modified
+        return max(matching_files, key=os.path.getmtime)
+
+def latlon_to_utm(lat, lon, utm_zone):
+    """Convert latitude/longitude to UTM coordinates."""
+    epsg_code = f"326{utm_zone[:-1]:0>2}" if utm_zone[-1] == 'N' else f"327{utm_zone[:-1]:0>2}"
+    transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{epsg_code}", always_xy=True)
+    x, y = transformer.transform(lon, lat)
+    return x, y
+
+def calculate_distance_along_track(x, y):
+    """Calculate cumulative distance along track from x, y coordinates."""
+    dx = np.diff(x)
+    dy = np.diff(y)
+    distances = np.sqrt(dx**2 + dy**2)
+    cumulative_distance = np.concatenate([[0], np.cumsum(distances)])
+    return cumulative_distance
+
+def load_and_process_planned_track(planned_filepath):
+    """Load planned flight track and process coordinates."""
+    df = pd.read_csv(planned_filepath)
+    df['aircraft_altitude'] = df['elevation'] + df['agl_m']
+    df['distance_m'] = calculate_distance_along_track(df['x'].values, df['y'].values)
+    return df
+
+def load_and_process_actual_track(actual_filepath, utm_zone, flight_direction):
+    """Load actual flight track, convert coordinates, and calculate distances."""
+    df = pd.read_csv(actual_filepath)
+    
+    # Convert lat/lon to UTM
+    utm_coords = [latlon_to_utm(lat, lon, utm_zone) 
+                  for lat, lon in zip(df['LATITUDE'], df['LONGITUDE'])]
+    df['x'] = [coord[0] for coord in utm_coords]
+    df['y'] = [coord[1] for coord in utm_coords]
+    
+    # If flight direction is south to north, reverse the order of points
+    if flight_direction == "StoN":
+        df = df.iloc[::-1].reset_index(drop=True)
+    
+    # Calculate distance along track
+    df['distance_m'] = calculate_distance_along_track(df['x'].values, df['y'].values)
+    
+    return df
+
+def truncate_actual_track(actual_df, min_distance, max_distance):
+    """Truncate actual track to match planned track distance range."""
+    mask = (actual_df['distance_m'] >= min_distance) & (actual_df['distance_m'] <= max_distance)
+    truncated = actual_df[mask].copy()
+    truncated['distance_m'] = truncated['distance_m'] - min_distance
+    return truncated
+
+def create_comparison_plot(planned_df, actual_df, line_number, output_filepath):
+    """Create comparison plot of planned vs actual flight tracks."""
+    fig, ax = plt.subplots(figsize=(14, 7))
+    
+    ax.fill_between(planned_df['distance_m'], 0, planned_df['elevation'], 
+                     color='tan', alpha=0.6, label='Terrain')
+    ax.plot(planned_df['distance_m'], planned_df['aircraft_altitude'], 
+            color='blue', linewidth=2, label='Planned Flight Path', linestyle='--')
+    ax.plot(actual_df['distance_m'], actual_df['ELEVATION'], 
+            color='red', linewidth=2, label='Actual Flight Path')
+    
+    ax.set_xlabel('Distance along flight line (m)', fontsize=12)
+    ax.set_ylabel('Altitude (m above sea level)', fontsize=12)
+    ax.set_title(f'Flight Line {line_number} - Variable Altitude Flight Plan Comparison', 
+                 fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.legend(loc='best', fontsize=10, framealpha=0.9)
+    ax.set_ylim(bottom=0)
+    
+    ax.text(0.98, 0.02, 'S', transform=ax.transAxes,
+            fontsize=16, fontweight='bold', ha='center', va='center',
+            bbox=dict(boxstyle='circle', facecolor='white', edgecolor='black', linewidth=2))
+    
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(output_filepath), exist_ok=True)
+    plt.savefig(output_filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+def interpolate_planned_altitude(planned_df, actual_distances):
+    """Interpolate planned altitude at actual flight track distances."""
+    f = interp1d(planned_df['distance_m'], planned_df['aircraft_altitude'], 
+                 kind='linear', fill_value='extrapolate')
+    return f(actual_distances)
+
+def create_variation_plot(planned_df, actual_df, line_number, output_filepath):
+    """Create plot showing variation of actual flight path from planned."""
+    planned_interpolated = interpolate_planned_altitude(planned_df, actual_df['distance_m'])
+    variation = actual_df['ELEVATION'].values - planned_interpolated
+    
+    fig, ax = plt.subplots(figsize=(14, 4))
+    
+    ax.axhline(y=0, color='black', linewidth=2, label='Planned Flight Path', zorder=2)
+    ax.fill_between(actual_df['distance_m'], 0, variation, 
+                     where=(variation >= 0), color='green', alpha=0.6, 
+                     interpolate=True, label='Actual flight path above planned line')
+    ax.fill_between(actual_df['distance_m'], 0, variation, 
+                     where=(variation < 0), color='gold', alpha=0.6, 
+                     interpolate=True, label='Actual flight path below planned line')
+    ax.plot(actual_df['distance_m'], variation, color='black', linewidth=1, alpha=0.5, zorder=3)
+    
+    ax.set_xlabel('Distance along flight line (m)', fontsize=12)
+    ax.set_ylabel('Altitude Variation (m)', fontsize=12)
+    ax.set_title(f'Flight Line {line_number} - Actual vs Planned Altitude Variation', 
+                 fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3, linestyle='--', axis='both')
+    
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys(), loc='upper center', 
+              bbox_to_anchor=(0.5, -0.20), fontsize=10, framealpha=0.9, ncol=3)
+    
+    mean_var = np.mean(variation)
+    std_var = np.std(variation)
+    max_var = np.max(variation)
+    min_var = np.min(variation)
+    
+    stats_text = f'Mean: {mean_var:.1f}m\nStd: {std_var:.1f}m\nMax: {max_var:.1f}m\nMin: {min_var:.1f}m'
+    ax.text(0.02, 0.98, stats_text, transform=ax.transAxes,
+            fontsize=9, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray'))
+    
+    ax.text(0.98, 0.08, 'S', transform=ax.transAxes,
+            fontsize=16, fontweight='bold', ha='center', va='center',
+            bbox=dict(boxstyle='circle', facecolor='white', edgecolor='black', linewidth=2))
+    
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(output_filepath), exist_ok=True)
+    plt.savefig(output_filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    return variation
+
+def create_combined_plot(planned_df, actual_df, line_number, output_filepath):
+    """Create combined plot with comparison on top and variation on bottom."""
+    planned_interpolated = interpolate_planned_altitude(planned_df, actual_df['distance_m'])
+    variation = actual_df['ELEVATION'].values - planned_interpolated
+    
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), 
+                                     gridspec_kw={'height_ratios': [2, 1], 'hspace': 0.3})
+    
+    # Top plot
+    ax1.fill_between(planned_df['distance_m'], 0, planned_df['elevation'], 
+                     color='tan', alpha=0.6, label='Terrain')
+    ax1.plot(planned_df['distance_m'], planned_df['aircraft_altitude'], 
+            color='blue', linewidth=2, label='Planned Flight Path', linestyle='--')
+    ax1.plot(actual_df['distance_m'], actual_df['ELEVATION'], 
+            color='red', linewidth=2, label='Actual Flight Path')
+    
+    ax1.set_xlabel('Distance along flight line (m)', fontsize=12)
+    ax1.set_ylabel('Altitude (m above sea level)', fontsize=12)
+    ax1.set_title(f'Flight Line {line_number} - Variable Altitude Flight Plan Comparison', 
+                 fontsize=14, fontweight='bold')
+    ax1.grid(True, alpha=0.3, linestyle='--')
+    ax1.legend(loc='best', fontsize=10, framealpha=0.9)
+    ax1.set_ylim(bottom=0)
+    ax1.text(0.98, 0.02, 'S', transform=ax1.transAxes,
+            fontsize=16, fontweight='bold', ha='center', va='center',
+            bbox=dict(boxstyle='circle', facecolor='white', edgecolor='black', linewidth=2))
+    
+    # Bottom plot
+    ax2.axhline(y=0, color='black', linewidth=2, label='Planned Flight Path', zorder=2)
+    ax2.fill_between(actual_df['distance_m'], 0, variation, 
+                     where=(variation >= 0), color='green', alpha=0.6, 
+                     interpolate=True, label='Actual flight path above planned line')
+    ax2.fill_between(actual_df['distance_m'], 0, variation, 
+                     where=(variation < 0), color='gold', alpha=0.6, 
+                     interpolate=True, label='Actual flight path below planned line')
+    ax2.plot(actual_df['distance_m'], variation, color='black', linewidth=1, alpha=0.5, zorder=3)
+    
+    ax2.set_xlabel('Distance along flight line (m)', fontsize=12)
+    ax2.set_ylabel('Altitude Variation (m)', fontsize=12)
+    ax2.set_title(f'Flight Line {line_number} - Actual vs Planned Altitude Variation', 
+                 fontsize=14, fontweight='bold')
+    ax2.grid(True, alpha=0.3, linestyle='--', axis='both')
+    
+    handles, labels = ax2.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax2.legend(by_label.values(), by_label.keys(), loc='upper center', 
+              bbox_to_anchor=(0.5, -0.20), fontsize=10, framealpha=0.9, ncol=3)
+    
+    mean_var = np.mean(variation)
+    std_var = np.std(variation)
+    max_var = np.max(variation)
+    min_var = np.min(variation)
+    
+    stats_text = f'Mean: {mean_var:.1f}m\nStd: {std_var:.1f}m\nMax: {max_var:.1f}m\nMin: {min_var:.1f}m'
+    ax2.text(0.02, 0.98, stats_text, transform=ax2.transAxes,
+            fontsize=9, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray'))
+    ax2.text(0.98, 0.08, 'S', transform=ax2.transAxes,
+            fontsize=16, fontweight='bold', ha='center', va='center',
+            bbox=dict(boxstyle='circle', facecolor='white', edgecolor='black', linewidth=2))
+    
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(output_filepath), exist_ok=True)
+    plt.savefig(output_filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    return variation
+
+def process_single_line(line_number, north_time, south_time):
+    """Process a single flight line."""
+    print(f"\nProcessing Line {line_number}:")
+    
+    # Determine flight direction
+    flight_direction = determine_flight_direction(north_time, south_time)
+    print(f"  Flight direction: {flight_direction}")
+    
+    # Find actual track file
+    actual_filepath = find_actual_track_file(ACTUAL_PATH, line_number)
+    if actual_filepath is None:
+        print(f"  Error: No actual track file found for line {line_number}")
+        return False
+    print(f"  Found actual track: {os.path.basename(actual_filepath)}")
+    
+    # Find planned track file
+    planned_file = f"flight_track_line_{line_number}_NtoS.csv"
+    planned_filepath = os.path.join(PLANNED_PATH, planned_file)
+    if not os.path.exists(planned_filepath):
+        print(f"  Error: Planned track file not found: {planned_file}")
+        return False
+    print(f"  Found planned track: {planned_file}")
+    
+    try:
+        # Load data
+        planned_df = load_and_process_planned_track(planned_filepath)
+        actual_df = load_and_process_actual_track(actual_filepath, UTM_ZONE, flight_direction)
+        
+        # Truncate actual track
+        min_distance = planned_df['distance_m'].min()
+        max_distance = planned_df['distance_m'].max()
+        actual_df_truncated = truncate_actual_track(actual_df, min_distance, max_distance)
+        
+        if len(actual_df_truncated) == 0:
+            print(f"  Warning: No actual track points within planned range")
+            return False
+        
+        # Create output filenames
+        output_comparison = os.path.join(OUTPUT_PATH, f"flight_comparison_line_{line_number}.png")
+        output_variation = os.path.join(OUTPUT_PATH, f"flight_comparison_line_{line_number}_flightline_variation.png")
+        output_combined = os.path.join(OUTPUT_PATH, f"flight_comparison_line_{line_number}_combined.png")
+        
+        # Generate plots
+        create_comparison_plot(planned_df, actual_df_truncated, line_number, output_comparison)
+        variation = create_variation_plot(planned_df, actual_df_truncated, line_number, output_variation)
+        create_combined_plot(planned_df, actual_df_truncated, line_number, output_combined)
+        
+        # Print statistics
+        print(f"  Statistics - Mean: {np.mean(variation):.1f}m, Std: {np.std(variation):.1f}m, "
+              f"Max: {np.max(variation):.1f}m, Min: {np.min(variation):.1f}m")
+        print(f"  ✓ Generated 3 plots")
+        
+        return True
+        
+    except Exception as e:
+        print(f"  Error processing line {line_number}: {e}")
+        return False
+
+def main():
+    """Main execution function."""
+    try:
+        # Check if CSV file exists
+        if not os.path.exists(FLIGHT_LINES_CSV):
+            print(f"Error: Flight lines CSV not found: {FLIGHT_LINES_CSV}")
+            return
+        
+        # Read flight lines CSV
+        print(f"Reading flight lines from: {FLIGHT_LINES_CSV}")
+        df = pd.read_csv(FLIGHT_LINES_CSV)
+        
+        # Validate required columns
+        required_columns = ['Line', 'North', 'South']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            print(f"Error: Missing required columns in CSV: {missing_columns}")
+            return
+        
+        print(f"Found {len(df)} flight lines to process")
+        print("=" * 70)
+        
+        # Process each line
+        success_count = 0
+        fail_count = 0
+        
+        for idx, row in df.iterrows():
+            line_number = int(row['Line'])
+            north_time = float(row['North'])
+            south_time = float(row['South'])
+            
+            success = process_single_line(line_number, north_time, south_time)
+            
+            if success:
+                success_count += 1
+            else:
+                fail_count += 1
+        
+        # Summary
+        print("\n" + "=" * 70)
+        print("Processing Summary")
+        print("=" * 70)
+        print(f"Total lines: {len(df)}")
+        print(f"Successful: {success_count}")
+        print(f"Failed: {fail_count}")
+        print(f"\nPlots saved to: {OUTPUT_PATH}")
+        
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    main()

@@ -21,11 +21,11 @@ from pathlib import Path
 # =============================================================================
 
 # Input file path and name
-INPUT_FILE = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\SBET\sbet_2024080714.out"
+INPUT_FILE = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\SBET\2025_Daily_2025061314_P1C1_L1_GPSIMU_sbet_2025061314.out"
 
 # Output directory and filename (without extension)
-OUTPUT_DIR = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D10_RMNP\Shapes"
-OUTPUT_FILENAME = "flight_trajectory_RMNP_2024080714_subset"
+OUTPUT_DIR = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\z_Assignable_Assets\D13_LBLB\Shapes"
+OUTPUT_FILENAME = "flight_trajectory_CRBU_P1C1_L1_GPSIMU_sbet_2025061314_subset"
 
 # Optional: Coordinate Reference System (WGS84 is default)
 # Change this if you need a different coordinate system
@@ -35,7 +35,7 @@ COORDINATE_SYSTEM = "WGS84"
 # OPTION 1: Point-based decimation (simple, fast)
 # Set to 1 to keep all points, or higher numbers to reduce point density
 # For example: POINT_DECIMATION = 10 keeps every 10th point
-POINT_DECIMATION = 50  # Keep every 50th point
+POINT_DECIMATION = 100  # Keep every 50th point
 
 # OPTION 2: Time-based decimation (more precise, based on GPS time)
 # Set TIME_BASED_DECIMATION = True to use this instead of point-based
