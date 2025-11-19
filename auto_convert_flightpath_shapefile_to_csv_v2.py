@@ -8,10 +8,10 @@ import os
 # ============================================================================
 
 # Path to the CSV file containing SBET GPS times information
-FLIGHT_LINES_CSV = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\BART_2025_GPS_start_end_times.csv"
+FLIGHT_LINES_CSV = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\HARV_2025_GPS_start_end_times.csv"
 
 # Input shapefile path
-INPUT_PATH = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D01_BART\Shapes"
+INPUT_PATH = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D01_HARV\SBET"
 
 # Output path for CSV files
 OUTPUT_PATH = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\data_out"

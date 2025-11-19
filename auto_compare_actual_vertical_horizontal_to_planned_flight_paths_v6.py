@@ -11,16 +11,16 @@ import glob
 # ============================================================================
 
 # Site name to display in plot title
-SITE = "Bartlett Forest (BART)"
+SITE = "Harvard Forest (HARV)"
 
 # Path to the CSV file containing flight line information
-FLIGHT_LINES_CSV = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\BART_2025_GPS_start_end_times.csv"
+FLIGHT_LINES_CSV = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\HARV_2025_GPS_start_end_times.csv"
 
 # UTM Zone
-UTM_ZONE = "19N"
+UTM_ZONE = "18N"
 
 # Planned flight line path
-# Requires the planned flight tracks from the variable altitude flight plans
+# Requires the planned flight tracks from the fixed or variable altitude flight plans
 PLANNED_PATH = r"C:\Users\jmusinsky\Documents\Data\TopoFlight\Conversions\pointsToElev\data_out"
 
 # Actual flight track path (where CSV files from shapefile extraction are saved)
@@ -122,6 +122,12 @@ def interpolate_planned_coordinates(planned_df, actual_distances):
                    kind='linear', fill_value='extrapolate')
     return f_x(actual_distances), f_y(actual_distances)
 
+def interpolate_planned_terrain(planned_df, actual_distances):
+    """Interpolate planned terrain elevation at actual flight track distances."""
+    f = interp1d(planned_df['distance_m'], planned_df['elevation'], 
+                 kind='linear', fill_value='extrapolate')
+    return f(actual_distances)
+
 def calculate_perpendicular_distance(actual_x, actual_y, planned_x, planned_y):
     """
     Calculate perpendicular distance from actual track points to planned track line.
@@ -203,6 +209,13 @@ def create_combined_analysis_plot(planned_df, actual_df, line_number, site_name,
         actual_df['x'].values, actual_df['y'].values,
         planned_x_interp, planned_y_interp)
     
+    # Calculate AGL statistics for actual flight
+    planned_terrain_interp = interpolate_planned_terrain(planned_df, actual_df['distance_m'])
+    actual_agl = actual_df['ELEVATION'].values - planned_terrain_interp
+    mean_agl = np.mean(actual_agl)
+    max_agl = np.max(actual_agl)
+    min_agl = np.min(actual_agl)
+    
     # Create figure with 3 subplots using GridSpec for individual spacing control
     fig = plt.figure(figsize=(14, 13))
     
@@ -229,12 +242,25 @@ def create_combined_analysis_plot(planned_df, actual_df, line_number, site_name,
     ax1.plot(actual_df['distance_m'], actual_df['ELEVATION'], 
             color='red', linewidth=2, label='Actual Flight Path')
     
+    # Create custom legend with AGL stats
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    
+    legend_elements = [
+        Patch(facecolor='tan', alpha=0.6, label='Terrain'),
+        Line2D([0], [0], color='blue', linewidth=2, linestyle='--', label='Planned Flight Path'),
+        Line2D([0], [0], color='red', linewidth=2, label='Actual Flight Path'),
+        Line2D([0], [0], color='none', label=f'Mean AGL: {mean_agl:.0f}m'),
+        Line2D([0], [0], color='none', label=f'Max AGL: {max_agl:.0f}m'),
+        Line2D([0], [0], color='none', label=f'Min AGL: {min_agl:.0f}m')
+    ]
+    
     ax1.set_xlabel('Distance along flight line (m)', fontsize=12)
     ax1.set_ylabel('Altitude (m above sea level)', fontsize=12)
     ax1.set_title('Variable Altitude Flight Plan Comparison', 
                  fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3, linestyle='--')
-    ax1.legend(loc='best', fontsize=10, framealpha=0.9)
+    ax1.legend(handles=legend_elements, loc='best', fontsize=10, framealpha=0.9)
     ax1.set_ylim(bottom=0)
     ax1.text(0.98, 0.06, 'S', transform=ax1.transAxes,
             fontsize=16, fontweight='bold', ha='center', va='center',
