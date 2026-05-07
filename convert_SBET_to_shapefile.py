@@ -21,11 +21,11 @@ from pathlib import Path
 # =============================================================================
 
 # Input file path and name
-INPUT_FILE = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D01_HARV\SBET\2025_Daily_2025082312_P2C1_L1_GPSIMU_sbet_2025082312.out"
+INPUT_FILE = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D17_TEAK\SBET\2024_Daily_2024061315_P1C1_L1_GPSIMU_sbet_2024061315.out"
 
 # Output directory and filename (without extension)
-OUTPUT_DIR = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D01_HARV\Shapes"
-OUTPUT_FILENAME = "flight_trajectory_HARV_P2C1_L1_GPSIMU_sbet_2025082312_subset"
+OUTPUT_DIR = r"C:\Users\jmusinsky\Documents\Data\NEON Sites\Flight_Boundaries_ArcGIS_Online\D17_TEAK\Shapes"
+OUTPUT_FILENAME = "flight_trajectory_TEAK_P1C1_L1_GPSIMU_sbet_2024061315_subset"
 # Optional: Coordinate Reference System (WGS84 is default)
 # Change this if you need a different coordinate system
 COORDINATE_SYSTEM = "WGS84"
